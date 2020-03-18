@@ -242,7 +242,7 @@ wire compositesync;
 wire [5:0] video_r,video_g,video_b;
 
 tld_test_placa_mister tld_test_placa_mister(
-	.clk50mhz(CLK_50M),
+	.clk7(clk_7),
 	//.Reset_n(~(RESET | status[0]  | buttons[1] | ioctl_download)),
 	.BTN_USER(~btn_one_player),
 

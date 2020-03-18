@@ -648,7 +648,7 @@ module updater (
 				  stringlist[ADDRJOYSTATE1+3]  <= (joystick1[0]  == 1'b1)? "R" : " "; //Derecha
               stringlist[ADDRJOYSTATE1+4]  <= (joystick1[1]  == 1'b1)? "L" : " "; //Izquierda
               stringlist[ADDRJOYSTATE1+5]  <= (joystick1[2]  == 1'b1)? "D" : " "; //Abajo
-              stringlist[ADDRJOYSTATE1+6]  <= (joystick1[3]  == 1'b1)? "A" : " "; //Arriba
+              stringlist[ADDRJOYSTATE1+6]  <= (joystick1[3]  == 1'b1)? "U" : " "; //Arriba
               stringlist[ADDRJOYSTATE1+7]  <= (joystick1[4]  == 1'b1)? "A" : " "; //A
               stringlist[ADDRJOYSTATE1+8]  <= (joystick1[5]  == 1'b1)? "B" : " "; //B
               stringlist[ADDRJOYSTATE1+9]  <= (joystick1[6]  == 1'b1)? "C" : " "; //C

@@ -22,7 +22,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module tld_test_placa_mister (
-  input wire clk50mhz,
+  input wire clk7,
   input wire BTN_USER,
   //---------------------------
   output wire CLK_VIDEO,
@@ -41,7 +41,7 @@ module tld_test_placa_mister (
   );
 
   
-  wire clk100, clk100n, clk14, clk7;
+  wire clk100, clk100n, clk14;//, clk7;
   wire clocks_ready;
 
   assign CLK_VIDEO = clk7;
