@@ -70,18 +70,22 @@ module emu
 	// 2..6 - USR2..USR6
 	// Set USER_OUT to 1 to read from USER_IN.
 	output        USER_OSD,	
-	output        USER_MODE,
-	input   [6:0] USER_IN,
-	output  [6:0] USER_OUT
+	output  [1:0] USER_MODE,
+	input   [7:0] USER_IN,
+	output  [7:0] USER_OUT,
+	output        OSD_STATUS
 );
 
 assign VGA_F1    = 0;
 
-wire   JOY_CLK, JOY_LOAD;
-wire   JOY_DATA  = USER_IN[5];
-assign USER_OUT  = |status[31:30] ? {5'b11111,JOY_CLK,JOY_LOAD} : '1;
-assign USER_MODE = |status[31:30] ;
-assign USER_OSD  = joydb15_1[10] & joydb15_1[6];
+wire         CLK_JOY = CLK_50M;         //Assign clock between 40-50Mhz
+wire   [2:0] JOY_FLAG  = status[31:29]; //Assign 3 bits of status (31:29) o (63:61)
+wire         JOY_CLK, JOY_LOAD, JOY_SPLIT, JOY_MDSEL;
+wire   [5:0] JOY_MDIN  = JOY_FLAG[2] ? {USER_IN[6],USER_IN[3],USER_IN[5],USER_IN[7],USER_IN[1],USER_IN[2]} : '1;
+wire         JOY_DATA  = JOY_FLAG[1] ? USER_IN[5] : '1;
+assign       USER_OUT  = JOY_FLAG[2] ? {3'b111,JOY_SPLIT,3'b111,JOY_MDSEL} : JOY_FLAG[1] ? {6'b111111,JOY_CLK,JOY_LOAD} : '1;
+assign       USER_MODE = JOY_FLAG[2:1] ;
+assign       USER_OSD  = joydb_1[10] & joydb_1[6];
 
 assign LED_USER  = ioctl_download;
 assign LED_DISK  = 2'b00;
@@ -93,21 +97,13 @@ assign HDMI_ARY = status[1] ? 8'd9  : 8'd3;
 
 `include "build_id.v"
 localparam CONF_STR = {
-	"A.ULTRATNK;;",
+	"A.TEST_DB;;",
 	"O1,Aspect Ratio,Original,Wide;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",  
-	"OUV,Serial SNAC DB15,Off,1 Player,2 Players;",	
-	"-;",
-	"O89,Extended Play,none,25pts,50pts,75pts;",
-	"OAB,Game time,150 Sec,120 Sec,90 Sec,60 Sec;",
-	"OC,Color,Off,On;",
-	"OD,Test,Off,On;",
-	"OE,Invisible tanks,Off,On;",
-	"OF,Rebounding shells,Off,On;",
-	"OG,Barriers,On,Off;",
+	"OUV,UserIO Joystick,Off,DB15,DB9;",
+	"OT,UserIO Players,1 Player,2 Players;",
 	"-;",
 	"R0,Reset;",
-	"J1,Fire,Start 1P,Start 2P,Coin;",
 	"V,v",`BUILD_DATE
 };
 
@@ -126,20 +122,36 @@ wire [10:0] ps2_key;
 
 wire [15:0] joy1_USB, joy2_USB;
 
-wire [31:0] joy1 = |status[31:30] ? {joydb15_1[11],joydb15_1[9],joydb15_1[10],joydb15_1[4:0]} : joy1_USB;
-wire [31:0] joy2 =  status[31]    ? {joydb15_2[11],joydb15_2[10],joydb15_2[9],joydb15_2[4:0]} : status[30] ? joy1_USB : joy2_USB;
+wire [31:0] joy1 = joydb_1ena ? joydb_1 : joy1_USB;
+wire [31:0] joy2 = joydb_2ena ? joydb_2 : joydb_1ena ? joy1_USB : joy2_USB;
+
+wire [15:0] joydb_1 = JOY_FLAG[2] ? {JOYDB9MD_1[11],JOYDB9MD_1[10] | (JOYDB9MD_1[11] & JOYDB9MD_1[5]),JOYDB9MD_1[9:0]} : JOY_FLAG[1] ? JOYDB15_1 : '0;
+wire [15:0] joydb_2 = JOY_FLAG[2] ? {JOYDB9MD_2[11],JOYDB9MD_2[10] | (JOYDB9MD_2[11] & JOYDB9MD_2[5]),JOYDB9MD_2[9:0]} : JOY_FLAG[1] ? JOYDB15_2 : '0;
+wire        joydb_1ena = |JOY_FLAG[2:1]               & ~OSD_STATUS;
+wire        joydb_2ena = |JOY_FLAG[2:1] & JOY_FLAG[0] & ~OSD_STATUS;
 
 //----BA 9876543210
 //----LS FEDCBAUDLR
-reg [15:0] joydb15_1,joydb15_2;
+reg [15:0] JOYDB9MD_1,JOYDB9MD_2;
+joy_db9md joy_db9md
+(
+  .clk       ( CLK_JOY    ), //40-50MHz
+  .joy_split ( JOY_SPLIT  ),
+  .joy_mdsel ( JOY_MDSEL  ),
+  .joy_in    ( JOY_MDIN   ),
+  .joystick1 ( JOYDB9MD_1 ),
+  .joystick2 ( JOYDB9MD_2 )	  
+);
+
+reg [15:0] JOYDB15_1,JOYDB15_2;
 joy_db15 joy_db15
 (
-  .clk       ( CLK_50M   ), //48MHz
+  .clk       ( CLK_JOY   ), //48MHz
   .JOY_CLK   ( JOY_CLK   ),
   .JOY_DATA  ( JOY_DATA  ),
   .JOY_LOAD  ( JOY_LOAD  ),
-  .joystick1 ( joydb15_1 ),
-  .joystick2 ( joydb15_2 )	  
+  .joystick1 ( JOYDB15_1 ),
+  .joystick2 ( JOYDB15_2 )	  
 );
 
 
@@ -161,7 +173,7 @@ hps_io #(.STRLEN(($size(CONF_STR)>>3) )) hps_io
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_data),
 	
-	.joy_raw(joydb15_1[5:0]),
+	.joy_raw(joydb_1[5:0]),
 	.joystick_0(joy1_USB),
 	.joystick_1(joy2_USB),
 	.ps2_key(ps2_key)
@@ -256,8 +268,8 @@ tld_test_placa_mister tld_test_placa_mister(
 	.vblank_to_vga(vblank),
 	.csync_to_vga(compositesync),
 	
-	.joy1(joydb15_1),
-	.joy2(joydb15_2),
+	.joy1(joy1),
+	.joy2(joy2),
 	
 	.CLK_VIDEO(CLK_VIDEO_2)
 	);
