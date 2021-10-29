@@ -1,6 +1,6 @@
 set_global_assignment -name VERILOG_MACRO "LITE=1"
 set_global_assignment -name SYSTEMVERILOG_FILE "Test_DB15.sv"
-set_global_assignment -name VERILOG_FILE src/joydb15.v
+set_global_assignment -name VERILOG_FILE src/joydb15new.v
 set_global_assignment -name VERILOG_FILE src/joydb9md.v
 set_global_assignment -name VERILOG_FILE src/test_placa_mister.v
 set_global_assignment -name VERILOG_FILE src/video_processor.v
